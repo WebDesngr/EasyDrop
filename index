@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy Drop - Share files instantly</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #070913;
+            --text-main: #ffffff;
+            --text-muted: #9ca3af;
+            --primary-glow: rgba(138, 43, 226, 0.6);
+            --secondary-glow: rgba(59, 130, 246, 0.6);
+            --glass-bg: rgba(20, 22, 39, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --gradient-text: linear-gradient(90deg, #d946ef, #8b5cf6);
+            --gradient-button: linear-gradient(90deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2));
+            --font-family: 'Inter', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-family); }
+        body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; overflow-x: hidden; display: flex; flex-direction: column; position: relative; }
+
+        /* Ambient Background Animations */
+        .animated-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -3; overflow: hidden; background: #070913; }
+        .wave { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.4; animation: float 20s infinite linear; }
+        .wave-1 { width: 60vw; height: 60vh; background: radial-gradient(circle, rgba(139,92,246,0.3) 0%, transparent 60%); top: -20%; left: -10%; animation-duration: 25s; }
+        .wave-2 { width: 70vw; height: 70vh; background: radial-gradient(circle, rgba(59,130,246,0.2) 0%, transparent 60%); bottom: -20%; right: -10%; animation-duration: 30s; animation-direction: reverse; }
+        .wave-3 { width: 50vw; height: 50vh; background: radial-gradient(circle, rgba(217, 70, 239, 0.15) 0%, transparent 60%); top: 30%; left: 30%; animation-duration: 40s; }
+
+        @keyframes float {
+            0% { transform: rotate(0deg) translate(0, 0) scale(1); }
+            33% { transform: rotate(120deg) translate(10%, 10%) scale(1.2); }
+            66% { transform: rotate(240deg) translate(-10%, -10%) scale(0.9); }
+            100% { transform: rotate(360deg) translate(0, 0) scale(1); }
+        }
+
+        .glow-line { position: absolute; width: 200vw; height: 2px; background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.2), transparent); top: 50%; left: -50%; transform: rotate(-25deg); animation: lineMove 15s infinite linear; }
+        .glow-line:nth-child(2) { top: 70%; background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent); transform: rotate(25deg); animation-duration: 20s; animation-direction: reverse; }
+        @keyframes lineMove { 0% { transform: rotate(-25deg) translateY(0); opacity: 0.1; } 50% { opacity: 0.5; } 100% { transform: rotate(-25deg) translateY(50vh); opacity: 0.1; } }
+
+        #cursor-glow { position: fixed; width: 400px; height: 400px; background: radial-gradient(circle, rgba(138, 43, 226, 0.15) 0%, transparent 50%); border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); z-index: -2; transition: opacity 0.3s ease; }
+
+        /* Navigation */
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 5%; width: 100%; z-index: 10; }
+        .logo { display: flex; align-items: center; gap: 0.75rem; font-size: 1.5rem; font-weight: 700; }
+        .logo i { color: #a78bfa; font-size: 1.8rem; }
+
+        .tab-switcher { display: flex; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--glass-border); border-radius: 50px; padding: 0.25rem; position: relative; }
+        .tab-btn { background: transparent; border: none; color: var(--text-muted); padding: 0.75rem 2rem; border-radius: 50px; cursor: pointer; font-weight: 500; font-size: 0.9rem; transition: color 0.3s ease; position: relative; z-index: 1; overflow: hidden; outline: none; }
+        .tab-btn.active { color: var(--text-main); }
+        .tab-indicator { position: absolute; top: 0.25rem; bottom: 0.25rem; width: calc(50% - 0.25rem); background: var(--gradient-button); border-radius: 50px; box-shadow: 0 0 15px var(--primary-glow); transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), background 0.4s, border-bottom 0.4s; border-bottom: 2px solid #a78bfa; }
+
+        .nav-actions { display: flex; gap: 1rem; align-items: center; }
+        .icon-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-muted); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden; outline: none; }
+        .icon-btn:hover, .icon-btn:focus-visible { color: var(--text-main); border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 0 15px rgba(255,255,255,0.1); transform: translateY(-2px); }
+        .btn-outline { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-main); padding: 0.5rem 1rem; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease; position: relative; overflow: hidden; outline: none; }
+        .btn-outline:hover, .btn-outline:focus-visible { border-color: #a78bfa; box-shadow: 0 0 15px rgba(167, 139, 250, 0.2); transform: translateY(-2px); }
+
+        /* Hero Section */
+        .hero { text-align: center; padding: 3rem 1rem; z-index: 10; }
+        .hero h1 { font-size: 3.5rem; font-weight: 700; margin-bottom: 1rem; display: flex; justify-content: center; align-items: center; gap: 1rem; }
+        .hero h1 .sparkle { color: #a78bfa; font-size: 1.5rem; animation: twinkle 2s infinite alternate; }
+        .hero h1 .gradient-text { background: var(--gradient-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero p { color: var(--text-muted); font-size: 1.1rem; }
+        .hero p a { color: #8b5cf6; text-decoration: none; transition: color 0.3s; }
+        .hero p a:hover { color: #d946ef; text-shadow: 0 0 10px rgba(217, 70, 239, 0.5); }
+
+        /* Main Content Panels */
+        .panels-container { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 0 5%; z-index: 10; position: relative; }
+        .panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 24px; padding: 3rem 2rem; width: 100%; max-width: 550px; text-align: center; position: absolute; top: 0; opacity: 0; visibility: hidden; transform: translateY(20px); transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); outline: none; }
+        .panel.active { opacity: 1; visibility: visible; transform: translateY(0); position: relative; }
+        
+        /* Drag and Drop Active State */
+        .panel.dragover { border-color: #a78bfa; background: rgba(139, 92, 246, 0.15); box-shadow: 0 0 40px rgba(139, 92, 246, 0.2), inset 0 0 30px rgba(139, 92, 246, 0.2); transform: scale(1.02); }
+
+        .panel-glow-purple { box-shadow: inset 0 0 50px rgba(139, 92, 246, 0.1), 0 10px 30px rgba(0,0,0,0.5); border-top: 1px solid rgba(139, 92, 246, 0.3); }
+        .panel-glow-blue { box-shadow: inset 0 0 50px rgba(59, 130, 246, 0.1), 0 10px 30px rgba(0,0,0,0.5); border-top: 1px solid rgba(59, 130, 246, 0.3); }
+
+        .panel-icon { width: 80px; height: 80px; border-radius: 50%; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1.5rem auto; color: #a78bfa; box-shadow: 0 0 20px rgba(138, 43, 226, 0.2); transition: transform 0.3s ease; }
+        .panel.dragover .panel-icon { transform: scale(1.1) translateY(-5px); box-shadow: 0 0 30px rgba(138, 43, 226, 0.5); }
+        .panel-glow-blue .panel-icon { color: #60a5fa; box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
+
+        .panel h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .panel p { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem; pointer-events: none; }
+
+        /* Buttons & Inputs */
+        .btn-primary { background: rgba(255,255,255,0.05); border: 1px solid rgba(139, 92, 246, 0.4); color: white; padding: 0.8rem 2rem; border-radius: 50px; font-size: 1rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 0.75rem; transition: all 0.3s ease; box-shadow: 0 0 15px rgba(139, 92, 246, 0.2); position: relative; overflow: hidden; outline: none; }
+        .btn-primary:hover, .btn-primary:focus-visible { background: rgba(139, 92, 246, 0.15); box-shadow: 0 0 25px rgba(139, 92, 246, 0.4); transform: translateY(-2px); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .upload-actions { display: flex; gap: 1rem; justify-content: center; }
+
+        /* Progress Bar Enhancements */
+        .file-progress { display: none; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.5rem; flex-direction: column; gap: 1rem; margin-top: 2rem; text-align: left; animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; position: relative; z-index: 5; }
+        .progress-header { display: flex; align-items: center; gap: 1rem; width: 100%; }
+        .file-icon { background: var(--gradient-text); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; box-shadow: 0 0 15px rgba(217, 70, 239, 0.3); }
+        .file-details { flex: 1; min-width: 0; }
+        .file-details h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-details p { font-size: 0.8rem; margin: 0; color: var(--text-muted); display: flex; justify-content: space-between; }
+        
+        .progress-track { width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; position: relative; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+        .progress-fill { width: 0%; height: 100%; background: var(--gradient-text); border-radius: 4px; transition: width 0.2s linear; position: relative; overflow: hidden; }
+        /* Premium animated shine on progress bar */
+        .progress-fill::after { content: ''; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); animation: shimmer 1.5s infinite; transform: translateX(-100%); }
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
+
+        .progress-stats { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+        
+        .control-btns { display: flex; gap: 0.5rem; }
+        .ctrl-btn { background: transparent; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; transition: all 0.2s; padding: 0.3rem; border-radius: 5px; outline: none; }
+        .ctrl-btn:hover { color: white; background: rgba(255,255,255,0.1); }
+        .ctrl-btn.cancel:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+        .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2rem; pointer-events: none; transition: opacity 0.3s; }
+        .feature-box { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1rem 0.5rem; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; }
+        .feature-box i { font-size: 1.2rem; }
+        .feature-box:nth-child(1) i { color: #d946ef; }
+        .feature-box:nth-child(2) i { color: #8b5cf6; }
+        .feature-box:nth-child(3) i { color: #3b82f6; }
+        .feature-box h5 { font-size: 0.85rem; font-weight: 600; }
+        .feature-box p { font-size: 0.7rem; margin: 0; }
+
+        /* Receive Elements & Validation */
+        .input-group { position: relative; margin-bottom: 1.5rem; }
+        .input-group input { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); padding: 1rem 1.5rem; border-radius: 12px; color: white; font-size: 1rem; outline: none; transition: all 0.3s ease; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; }
+        .input-group input:focus { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+        .input-group input.error { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
+        .input-group input.success { border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+        
+        .btn-blue { border-color: rgba(59, 130, 246, 0.4); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); width: 100%; justify-content: center; background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.2)); padding: 1rem; }
+        .btn-blue:hover, .btn-blue:focus-visible { background: rgba(59, 130, 246, 0.25); box-shadow: 0 0 25px rgba(59, 130, 246, 0.4); }
+
+        .security-note { margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .error-msg { color: #ef4444; font-size: 0.8rem; margin-top: -1rem; margin-bottom: 1rem; display: none; text-align: left; padding-left: 0.5rem; }
+
+        /* File Details Info Box (Receive) */
+        .receive-details { display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; text-align: left; animation: slideUpFade 0.3s ease forwards; }
+        .receive-details .meta { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--glass-border); }
+
+        /* Glass Modal for Share Code */
+        .glass-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 1rem; }
+        .glass-modal.active { opacity: 1; pointer-events: all; }
+        .modal-content { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 2.5rem; text-align: center; width: 100%; max-width: 450px; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 50px rgba(139, 92, 246, 0.1); transform: scale(0.9); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); position: relative; }
+        .glass-modal.active .modal-content { transform: scale(1); }
+        .close-modal { position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; outline: none; }
+        .close-modal:hover { color: white; }
+        
+        .code-display { font-size: 2.5rem; font-weight: 700; letter-spacing: 4px; font-family: monospace; background: var(--gradient-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 1.5rem 0; text-shadow: 0 0 20px rgba(217, 70, 239, 0.3); }
+        .qr-placeholder { width: 150px; height: 150px; background: rgba(255,255,255,0.9); border-radius: 12px; margin: 0 auto 1.5rem auto; padding: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(138, 43, 226, 0.3); }
+        .qr-placeholder img { width: 100%; height: 100%; border-radius: 8px; }
+        
+        .modal-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+        /* Toasts */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { background: rgba(20, 22, 39, 0.8); border: 1px solid var(--glass-border); padding: 1rem 1.5rem; border-radius: 12px; color: white; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(10px); animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .toast.success i { color: #10b981; }
+        .toast.error i { color: #ef4444; }
+        .toast.info i { color: #3b82f6; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast.fade-out { animation: fadeOutRight 0.3s ease forwards; }
+        @keyframes fadeOutRight { to { transform: translateX(100%); opacity: 0; } }
+
+        /* Ripple Effect */
+        .ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: ripple-anim 0.6s linear; background: rgba(255, 255, 255, 0.3); pointer-events: none; }
+        @keyframes ripple-anim { to { transform: scale(4); opacity: 0; } }
+
+        /* Animations */
+        @keyframes twinkle { 0% { opacity: 0.5; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); } }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+        .shake { animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+        
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Footer */
+        footer { padding: 2rem 5%; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-top: 1px solid var(--glass-border); margin-top: 4rem; background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); }
+        .social-icons { display: flex; gap: 1rem; }
+        .social-icons a { color: var(--text-muted); text-decoration: none; font-size: 1.2rem; transition: color 0.3s ease; outline: none; }
+        .social-icons a:hover, .social-icons a:focus-visible { color: white; transform: scale(1.1); }
+        .credits { text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+        .credits i { color: #d946ef; }
+        .credits span { color: #a78bfa; }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            nav { flex-direction: column; gap: 1rem; }
+            .hero h1 { font-size: 2.2rem; }
+            .features { grid-template-columns: 1fr; }
+            footer { flex-direction: column; gap: 1.5rem; }
+            .panel { padding: 2rem 1.5rem; }
+            .progress-stats { flex-direction: column; gap: 4px; text-align: left; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Dynamic Flowing Background Animations -->
+    <div class="animated-bg">
+        <div class="wave wave-1"></div>
+        <div class="wave wave-2"></div>
+        <div class="wave wave-3"></div>
+        <div class="glow-line"></div>
+        <div class="glow-line"></div>
+    </div>
+    <div id="cursor-glow"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Easy Drop
+        </div>
+
+        <div class="tab-switcher" id="tabSwitcher" role="tablist">
+            <div class="tab-indicator" id="tabIndicator"></div>
+            <button class="tab-btn active" role="tab" aria-selected="true" onclick="switchTab('upload', 0)">Upload</button>
+            <button class="tab-btn" role="tab" aria-selected="false" onclick="switchTab('receive', 1)">Receive</button>
+        </div>
+
+        <div class="nav-actions">
+            <button class="icon-btn" aria-label="Toggle Theme"><i class="fa-regular fa-moon"></i></button>
+            <button class="icon-btn" aria-label="Help"><i class="fa-regular fa-circle-question"></i></button>
+            <button class="btn-outline"><i class="fa-solid fa-circle-info"></i> About</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>
+            <i class="fa-solid fa-sparkles sparkle"></i>
+            Share files. <span class="gradient-text">Instantly.</span>
+            <i class="fa-solid fa-sparkles sparkle"></i>
+        </h1>
+        <p>Upload your file and get a code to share it <a href="#">anywhere</a>.</p>
+    </section>
+
+    <!-- Main Dynamic Panels -->
+    <main class="panels-container">
+        
+        <!-- Upload Tab Panel -->
+        <div class="panel panel-glow-purple active" id="upload-panel" tabindex="0" role="region" aria-label="Upload File Area">
+            <div class="panel-icon">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <h2>Drag & drop your files here</h2>
+            <p>or click anywhere to browse</p>
+            
+            <!-- Hidden Inputs for actual file/folder upload -->
+            <input type="file" id="file-input" style="display: none;" multiple>
+            <input type="file" id="folder-input" style="display: none;" webkitdirectory directory>
+            
+            <div class="upload-actions" id="upload-buttons">
+                <button class="btn-primary" onclick="document.getElementById('file-input').click(); event.stopPropagation();">
+                    <i class="fa-solid fa-file-circle-plus"></i> Files
+                </button>
+                <button class="btn-primary" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.1);" onclick="document.getElementById('folder-input').click(); event.stopPropagation();">
+                    <i class="fa-solid fa-folder-plus"></i> Folder
+                </button>
+            </div>
+
+            <!-- Dynamic Premium Progress Bar -->
+            <div class="file-progress" id="progress-container">
+                <div class="progress-header">
+                    <div class="file-icon" id="type-icon">
+                        <i class="fa-solid fa-file"></i>
+                    </div>
+                    <div class="file-details">
+                        <h4 id="file-name">Preparing...</h4>
+                        <p>
+                            <span id="file-size-fraction">0 B / 0 B</span>
+                            <span id="progress-text" style="font-weight: 600; color: white;">0%</span>
+                        </p>
+                    </div>
+                    <div class="control-btns">
+                        <button class="ctrl-btn" id="btn-pause" aria-label="Pause" title="Pause"><i class="fa-solid fa-pause"></i></button>
+                        <button class="ctrl-btn cancel" id="btn-cancel" aria-label="Cancel" title="Cancel"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>
+                
+                <div class="progress-track">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                
+                <div class="progress-stats">
+                    <span id="upload-speed">-- MB/s</span>
+                    <span id="upload-eta">Calculating time...</span>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="features" id="features-container">
+                <div class="feature-box">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <h5>Secure</h5>
+                    <p>E2E Encryption</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fa-solid fa-bolt"></i>
+                    <h5>Fast</h5>
+                    <p>Global CDN edge</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fa-solid fa-link"></i>
+                    <h5>Simple</h5>
+                    <p>No login required</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Receive Tab Panel -->
+        <div class="panel panel-glow-blue" id="receive-panel">
+            <div class="panel-icon">
+                <i class="fa-solid fa-download"></i>
+            </div>
+            <h2>Enter the code to receive</h2>
+            <p>your file instantly</p>
+
+            <div class="input-group">
+                <input type="text" id="receive-code-input" placeholder="e.g. X7K9M2P4" maxlength="8" autocomplete="off">
+                <i class="fa-solid fa-keyboard"></i>
+            </div>
+            <div class="error-msg" id="receive-error">Invalid or expired code.</div>
+
+            <!-- Hidden details shown on valid code -->
+            <div class="receive-details" id="receive-details">
+                <div class="progress-header" style="margin-bottom: 0;">
+                    <div class="file-icon" id="recv-icon" style="background: linear-gradient(90deg, #3b82f6, #0ea5e9);">
+                        <i class="fa-solid fa-file-zip"></i>
+                    </div>
+                    <div class="file-details">
+                        <h4 id="recv-name">Project_Assets.zip</h4>
+                        <p id="recv-size" style="margin-top: 4px;">1.4 GB</p>
+                    </div>
+                </div>
+                <div class="meta">
+                    <span><i class="fa-regular fa-clock"></i> Expires in 24h</span>
+                    <span><i class="fa-solid fa-shield-check"></i> Scanned</span>
+                </div>
+            </div>
+
+            <button class="btn-primary btn-blue" id="btn-download" disabled style="opacity: 0.5; cursor: not-allowed;">
+                <i class="fa-solid fa-download"></i> Download File
+            </button>
+
+            <div class="security-note">
+                <i class="fa-solid fa-lock"></i> Codes are case insensitive
+            </div>
+        </div>
+    </main>
+
+    <!-- Share Code Modal (Premium Glass Popup) -->
+    <div id="share-modal" class="glass-modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeShareModal()" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+            <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem;"><i class="fa-solid fa-circle-check" style="color: #10b981; margin-right: 8px;"></i>Upload Complete</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Your files are ready to share anywhere.</p>
+            
+            <div class="qr-placeholder" id="qr-container">
+                <!-- Fallback QR image generator API -->
+                <img id="qr-code-img" src="" alt="QR Code">
+            </div>
+
+            <div class="code-display" id="final-share-code">--------</div>
+            
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="copyShareCode()">
+                    <i class="fa-regular fa-copy"></i> Copy Code
+                </button>
+                <button class="btn-primary" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.4);" onclick="nativeShare()">
+                    <i class="fa-solid fa-share-nodes"></i> Share
+                </button>
+            </div>
+            <div style="margin-top: 1.5rem;">
+                <button class="btn-outline" style="margin: 0 auto; padding: 0.4rem 1rem; font-size: 0.85rem;" onclick="resetUpload()">
+                    <i class="fa-solid fa-rotate-right"></i> Upload Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="social-icons">
+            <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="#" aria-label="Twitter"><i class="fa-brands fa-twitter"></i></a>
+            <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        </div>
+        
+        <div class="credits">
+            <i class="fa-regular fa-heart"></i><br>
+            Created with <i class="fa-solid fa-heart" style="font-size: 10px;"></i> by <span>Shiraz</span><br>
+            <span style="color: var(--text-muted); font-size: 0.75rem; display: inline-block; margin-top: 5px;">© 2026 Easy Drop. All rights reserved.</span>
+        </div>
+
+        <button class="icon-btn" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Scroll Top"><i class="fa-solid fa-arrow-up"></i></button>
+    </footer>
+
+    <!-- Interactive Scripts & Backend Preps -->
+    <script>
+        // --- 1. UI Polish & Core Mechanics ---
+
+        // Custom Cursor Tracker
+        const cursorGlow = document.getElementById('cursor-glow');
+        document.addEventListener('mousemove', (e) => {
+            cursorGlow.style.left = e.clientX + 'px';
+            cursorGlow.style.top = e.clientY + 'px';
+        });
+
+        // Button Ripple Effect
+        document.querySelectorAll('.btn-primary, .tab-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                let rect = e.target.getBoundingClientRect();
+                let x = e.clientX - rect.left;
+                let y = e.clientY - rect.top;
+                let ripple = document.createElement('span');
+                ripple.className = 'ripple';
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+                this.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = 'fa-circle-info';
+            if (type === 'success') icon = 'fa-circle-check';
+            if (type === 'error') icon = 'fa-circle-exclamation';
+
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Tab Switching
+        function switchTab(tabName, index) {
+            const buttons = document.querySelectorAll('.tab-btn');
+            const indicator = document.getElementById('tabIndicator');
+            const uploadPanel = document.getElementById('upload-panel');
+            const receivePanel = document.getElementById('receive-panel');
+
+            buttons.forEach(btn => { btn.classList.remove('active'); btn.setAttribute('aria-selected', 'false'); });
+            buttons[index].classList.add('active');
+            buttons[index].setAttribute('aria-selected', 'true');
+            indicator.style.transform = `translateX(${index * 100}%)`;
+
+            if(tabName === 'upload') {
+                receivePanel.classList.remove('active');
+                setTimeout(() => uploadPanel.classList.add('active'), 150);
+                indicator.style.background = 'linear-gradient(90deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2))';
+                indicator.style.boxShadow = '0 0 15px rgba(138, 43, 226, 0.6)';
+                indicator.style.borderBottom = '2px solid #a78bfa';
+            } else {
+                uploadPanel.classList.remove('active');
+                setTimeout(() => receivePanel.classList.add('active'), 150);
+                indicator.style.background = 'linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(14, 165, 233, 0.2))';
+                indicator.style.boxShadow = '0 0 15px rgba(59, 130, 246, 0.6)';
+                indicator.style.borderBottom = '2px solid #60a5fa';
+                document.getElementById('receive-code-input').focus();
+            }
+        }
+
+        // Utility: Format Bytes
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024, dm = decimals < 0 ? 0 : decimals, sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        // Utility: Get File Icon based on extension/type
+        function getFileIcon(type, name) {
+            if (type.startsWith('video/')) return 'fa-file-video';
+            if (type.startsWith('image/')) return 'fa-file-image';
+            if (type.startsWith('audio/')) return 'fa-file-audio';
+            if (type.includes('pdf')) return 'fa-file-pdf';
+            if (type.includes('zip') || type.includes('compressed') || name.endsWith('.rar')) return 'fa-file-zipper';
+            if (type.includes('word') || name.endsWith('.doc') || name.endsWith('.docx')) return 'fa-file-word';
+            return 'fa-file'; // generic
+        }
+
+        // --- 2. Backend Placeholder Functions (Cloudflare R2 / Workers Ready) ---
+        
+        let uploadController = null; // To handle pause/resume/cancel
+        let activeCode = "";
+
+        // Placeholder: Generate secure short code
+        async function generateShareCode() {
+            // In a real app, this asks the Worker/KV for a unique collision-free ID
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+            return code;
+        }
+
+        // Placeholder: Upload files (Simulates multipart/chunked upload)
+        async function uploadFiles(fileList) {
+            return new Promise((resolve, reject) => {
+                const totalBytes = Array.from(fileList).reduce((acc, file) => acc + file.size, 0);
+                let loadedBytes = 0;
+                let isPaused = false;
+                let isCancelled = false;
+                const startTime = Date.now();
+
+                // Assign controller hooks for UI buttons
+                uploadController = {
+                    pause: () => { isPaused = true; },
+                    resume: () => { isPaused = false; },
+                    cancel: () => { isCancelled = true; reject('Upload Cancelled'); }
+                };
+
+                // Fake network interval
+                const interval = setInterval(() => {
+                    if (isCancelled) { clearInterval(interval); return; }
+                    if (isPaused) return;
+
+                    // Simulate chunk upload based on file size for realism
+                    const maxSpeedPerTick = Math.max(1024 * 512, totalBytes * 0.05); 
+                    loadedBytes += maxSpeedPerTick;
+                    
+                    if (loadedBytes >= totalBytes) loadedBytes = totalBytes;
+
+                    const elapsedSec = (Date.now() - startTime) / 1000;
+                    const speedBps = loadedBytes / (elapsedSec || 1);
+                    const remainingBytes = totalBytes - loadedBytes;
+                    const etaSec = speedBps > 0 ? remainingBytes / speedBps : 0;
+
+                    updateProgressUI(loadedBytes, totalBytes, speedBps, etaSec);
+
+                    if (loadedBytes >= totalBytes) {
+                        clearInterval(interval);
+                        setTimeout(async () => {
+                            const code = await generateShareCode();
+                            resolve(code);
+                        }, 500); // short delay for 100% completion anim
+                    }
+                }, 300);
+            });
+        }
+
+        // Placeholder: Validate Code (Cloudflare KV check)
+        async function validateCode(code) {
+            // Simulate network delay
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    // Mock validation: any 8 char code containing 'A' is valid for demo purposes
+                    // In reality: fetch(`/api/file/${code}`) -> returns metadata or 404
+                    if(code.length === 8 && code.toUpperCase().includes('A')) {
+                        resolve({ valid: true, name: 'Project_Archive_v2.zip', size: 1024 * 1024 * 450, type: 'application/zip' });
+                    } else {
+                        resolve({ valid: false });
+                    }
+                }, 600);
+            });
+        }
+
+        // Placeholder: Download File
+        async function downloadFile(code) {
+            // In reality: window.location.href = `/api/download/${code}`;
+            showToast('Starting secure download...', 'info');
+        }
+
+        // --- 3. Upload UI Logic (Drag & Drop, Multi-file) ---
+
+        const uploadPanel = document.getElementById('upload-panel');
+        const fileInput = document.getElementById('file-input');
+        const folderInput = document.getElementById('folder-input');
+        const progressContainer = document.getElementById('progress-container');
+        const featuresContainer = document.getElementById('features-container');
+        const uploadButtons = document.getElementById('upload-buttons');
+
+        // Drag and Drop Events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadPanel.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadPanel.addEventListener(eventName, () => uploadPanel.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadPanel.addEventListener(eventName, () => uploadPanel.classList.remove('dragover'), false);
+        });
+
+        uploadPanel.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        folderInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        // Click anywhere on panel to open file dialog (unless clicking a specific button)
+        uploadPanel.addEventListener('click', (e) => {
+            if(progressContainer.style.display === 'flex' || e.target.closest('button')) return;
+            fileInput.click();
+        });
+
+        async function handleFiles(files) {
+            if (!files || files.length === 0) return;
+
+            // Setup UI for upload
+            featuresContainer.style.opacity = '0';
+            setTimeout(() => featuresContainer.style.display = 'none', 300);
+            uploadButtons.style.display = 'none';
+            progressContainer.style.display = 'flex';
+
+            // Determine display name and icon
+            let displayName = files.length === 1 ? files[0].name : `${files.length} Files Selected`;
+            let iconClass = files.length === 1 ? getFileIcon(files[0].type, files[0].name) : 'fa-copy';
+            
+            document.getElementById('file-name').textContent = displayName;
+            document.getElementById('type-icon').innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+            
+            // Reset UI states
+            document.getElementById('progress-fill').style.width = '0%';
+            document.getElementById('progress-fill').style.background = 'var(--gradient-text)';
+            document.getElementById('btn-pause').innerHTML = '<i class="fa-solid fa-pause"></i>';
+            document.getElementById('btn-pause').style.display = 'block';
+
+            try {
+                // Execute actual (placeholder) upload
+                const shareCode = await uploadFiles(files);
+                showUploadComplete(shareCode);
+            } catch (err) {
+                if (err === 'Upload Cancelled') {
+                    resetUpload();
+                    showToast('Upload cancelled', 'info');
+                } else {
+                    showToast('Upload failed. Try again.', 'error');
+                }
+            }
+        }
+
+        // Update the Progress UI during upload
+        function updateProgressUI(loaded, total, speedBps, etaSec) {
+            const percent = (loaded / total) * 100;
+            document.getElementById('progress-fill').style.width = `${percent}%`;
+            document.getElementById('progress-text').textContent = `${Math.floor(percent)}%`;
+            document.getElementById('file-size-fraction').textContent = `${formatBytes(loaded)} / ${formatBytes(total)}`;
+            document.getElementById('upload-speed').textContent = `${formatBytes(speedBps)}/s`;
+            
+            if (percent >= 100) {
+                document.getElementById('upload-eta').textContent = 'Finalizing...';
+            } else if (etaSec < 60) {
+                document.getElementById('upload-eta').textContent = `${Math.ceil(etaSec)}s left`;
+            } else {
+                document.getElementById('upload-eta').textContent = `${Math.floor(etaSec/60)}m ${Math.floor(etaSec%60)}s left`;
+            }
+        }
+
+        // Pause / Resume Logic
+        document.getElementById('btn-pause').addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!uploadController) return;
+            
+            const icon = this.querySelector('i');
+            if (icon.classList.contains('fa-pause')) {
+                uploadController.pause();
+                icon.className = 'fa-solid fa-play';
+                document.getElementById('upload-speed').textContent = 'Paused';
+                document.getElementById('upload-eta').textContent = '--';
+                document.getElementById('progress-fill').style.background = 'rgba(255,255,255,0.2)';
+            } else {
+                uploadController.resume();
+                icon.className = 'fa-solid fa-pause';
+                document.getElementById('progress-fill').style.background = 'var(--gradient-text)';
+            }
+        });
+
+        // Cancel Logic
+        document.getElementById('btn-cancel').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if(uploadController) uploadController.cancel();
+        });
+
+        function resetUpload() {
+            closeShareModal();
+            fileInput.value = '';
+            folderInput.value = '';
+            progressContainer.style.display = 'none';
+            featuresContainer.style.display = 'grid';
+            featuresContainer.style.opacity = '1';
+            uploadButtons.style.display = 'flex';
+        }
+
+        // --- 4. Share Modal Logic ---
+
+        function showUploadComplete(code) {
+            activeCode = code;
+            document.getElementById('progress-fill').style.background = '#10b981'; // Green success
+            document.getElementById('btn-pause').style.display = 'none';
+            document.getElementById('upload-eta').textContent = 'Completed';
+            
+            setTimeout(() => {
+                document.getElementById('final-share-code').textContent = code;
+                document.getElementById('qr-code-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://easydrop.app/${code}&color=070913&bgcolor=ffffff`;
+                
+                document.getElementById('share-modal').classList.add('active');
+                showToast('Files secured and ready to share!', 'success');
+            }, 600);
+        }
+
+        function closeShareModal() {
+            document.getElementById('share-modal').classList.remove('active');
+        }
+
+        function copyShareCode() {
+            navigator.clipboard.writeText(activeCode).then(() => {
+                showToast('Code copied to clipboard!', 'success');
+            });
+        }
+
+        async function nativeShare() {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Files shared via Easy Drop',
+                        text: `Here is my file sharing code: ${activeCode}`,
+                        url: `https://easydrop.app/${activeCode}`
+                    });
+                } catch (err) { console.log('Share API error or user cancelled'); }
+            } else {
+                copyShareCode(); // fallback
+            }
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('share-modal').classList.contains('active')) {
+                closeShareModal();
+            }
+        });
+
+        // --- 5. Receive UI Logic ---
+
+        const receiveInput = document.getElementById('receive-code-input');
+        const receiveError = document.getElementById('receive-error');
+        const receiveDetails = document.getElementById('receive-details');
+        const btnDownload = document.getElementById('btn-download');
+
+        let validateTimeout;
+
+        receiveInput.addEventListener('input', (e) => {
+            const val = e.target.value.toUpperCase();
+            e.target.value = val;
+            
+            // Reset UI
+            receiveInput.classList.remove('error', 'success');
+            receiveError.style.display = 'none';
+            receiveDetails.style.display = 'none';
+            btnDownload.disabled = true;
+            btnDownload.style.opacity = '0.5';
+            btnDownload.style.cursor = 'not-allowed';
+            btnDownload.innerHTML = `<i class="fa-solid fa-download"></i> Download File`;
+
+            if (val.length === 8) {
+                // Show loading spinner in input
+                e.target.nextElementSibling.className = 'fa-solid fa-circle-notch spinner';
+                
+                clearTimeout(validateTimeout);
+                validateTimeout = setTimeout(async () => {
+                    const result = await validateCode(val);
+                    e.target.nextElementSibling.className = 'fa-solid fa-keyboard'; // reset icon
+
+                    if (result.valid) {
+                        receiveInput.classList.add('success');
+                        document.getElementById('recv-name').textContent = result.name;
+                        document.getElementById('recv-size').textContent = formatBytes(result.size);
+                        document.getElementById('recv-icon').innerHTML = `<i class="fa-solid ${getFileIcon(result.type, result.name)}"></i>`;
+                        receiveDetails.style.display = 'block';
+                        
+                        btnDownload.disabled = false;
+                        btnDownload.style.opacity = '1';
+                        btnDownload.style.cursor = 'pointer';
+                        
+                        // Enter key to download
+                        document.addEventListener('keydown', handleEnterDownload);
+                    } else {
+                        receiveInput.classList.add('error');
+                        receiveError.style.display = 'block';
+                        receiveInput.parentElement.classList.add('shake');
+                        setTimeout(() => receiveInput.parentElement.classList.remove('shake'), 500);
+                        document.removeEventListener('keydown', handleEnterDownload);
+                    }
+                }, 500); // debounce
+            }
+        });
+
+        function handleEnterDownload(e) {
+            if (e.key === 'Enter' && !btnDownload.disabled && document.getElementById('receive-panel').classList.contains('active')) {
+                btnDownload.click();
+            }
+        }
+
+        btnDownload.addEventListener('click', () => {
+            const code = receiveInput.value;
+            btnDownload.innerHTML = `<i class="fa-solid fa-circle-notch spinner"></i> Starting...`;
+            downloadFile(code).then(() => {
+                setTimeout(() => {
+                    btnDownload.innerHTML = `<i class="fa-solid fa-check"></i> Download Started`;
+                    btnDownload.style.background = '#10b981';
+                    btnDownload.style.borderColor = '#059669';
+                    setTimeout(() => {
+                        btnDownload.innerHTML = `<i class="fa-solid fa-download"></i> Download File`;
+                        btnDownload.style.background = '';
+                        btnDownload.style.borderColor = '';
+                        receiveInput.value = '';
+                        receiveInput.dispatchEvent(new Event('input')); // reset UI
+                    }, 3000);
+                }, 1000);
+            });
+        });
+
+    </script>
+</body>
+</html>
